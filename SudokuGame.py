@@ -40,9 +40,7 @@ class Game:
         self.GRID_PADDING = (50, 100)
         self.CELL_SIZE = 50
         self.state = State.Playing
-        self.previous_state = None
         self.state_function = None
-        self.input_text = ""
         self.current_highlighted_cell = None
         self.current_selected_cell = None
         self.current_highlighted_number = None
@@ -62,7 +60,6 @@ class Game:
         self.number_input_buttons_rect = pygame.Rect(2*self.GRID_PADDING[0] + 9*self.CELL_SIZE,
                                                      self.GRID_PADDING[1] + 9*self.CELL_SIZE//8,
                                                      9*self.CELL_SIZE//2, 9*self.CELL_SIZE//2)
-        print(self.number_input_buttons_rect.width//2, 3*self.number_input_buttons_rect.height//4)
         self.undo_button = pygame.image.load("UndoButton.png")
         self.undo_button_rect = pygame.Rect(self.number_input_buttons_rect.x,
                                             self.number_input_buttons_rect.y +
@@ -74,13 +71,20 @@ class Game:
                                             self.number_input_buttons_rect.y +
                                             self.number_input_buttons_rect.height - 1,
                                             self.redo_button.get_width(), self.redo_button.get_height())
-        self.marking_button = None
-        self.erase_button = None
+        self.marking_button = pygame.image.load("MarkButton.png")
+        self.marking_button_rect = pygame.Rect(self.undo_button_rect.x,
+                                               self.undo_button_rect.y + self.undo_button_rect.height - 1,
+                                               self.marking_button.get_width() + 2, self.marking_button.get_height())
+        self.erase_button = pygame.image.load("EraseButton.png")
+        self.erase_button_rect = pygame.Rect(self.marking_button_rect.x + self.marking_button_rect.width - 1,
+                                             self.marking_button_rect.y,
+                                             self.redo_button_rect.width, self.redo_button_rect.height)
 
         # Fonts
         self.grid_font = pygame.font.SysFont("calibri", (3*self.CELL_SIZE)//5)
         self.number_font = pygame.font.SysFont("calibri", self.number_input_buttons_rect.width//5)
         self.button_font = pygame.font.SysFont("calibri", self.undo_button.get_height()//4)
+        self.small_font = pygame.font.SysFont("calibri", 14)
 
         # Game attributes
         self.puzzle = Sudoku()
@@ -183,6 +187,22 @@ class Game:
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         self.puzzle.redo()
 
+                # Mark Button
+                elif self.marking_button_rect.collidepoint(mouse_x, mouse_y):
+                    self.current_highlighted_button = self.marking_button_rect
+                    self.current_highlighted_number = None
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        self.puzzle.is_marking = not self.puzzle.is_marking
+
+                # Erase Button
+                elif self.erase_button_rect.collidepoint(mouse_x, mouse_y):
+                    self.current_highlighted_button = self.erase_button_rect
+                    self.current_highlighted_number = None
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if self.current_selected_cell:
+                            self.puzzle.remove((self.current_selected_cell[0]-self.grid.x)//self.CELL_SIZE,
+                                               (self.current_selected_cell[1]-self.grid.y)//self.CELL_SIZE)
+
                 # Otherwise just remove the highlighted cell
                 else:
                     self.current_highlighted_cell = None
@@ -195,7 +215,10 @@ class Game:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.grid.collidepoint(event.pos) \
                             or self.pause_toggle_rect.collidepoint(event.pos)\
-                            or self.number_input_buttons_rect.collidepoint(event.pos):
+                            or self.number_input_buttons_rect.collidepoint(event.pos)\
+                            or self.undo_button_rect.collidepoint(event.pos)\
+                            or self.redo_button_rect.collidepoint(event.pos)\
+                            or self.marking_button_rect.collidepoint(event.pos):
                         self.state = State.Playing
 
                 mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -213,14 +236,28 @@ class Game:
                                                                   self.number_input_buttons_rect.height//3)
 
                 # Undo button
-                if self.undo_button_rect.collidepoint(mouse_x, mouse_y):
+                elif self.undo_button_rect.collidepoint(mouse_x, mouse_y):
                     self.current_highlighted_button = self.undo_button_rect
                     self.current_highlighted_number = None
 
                 # Redo Button
-                if self.redo_button_rect.collidepoint(mouse_x, mouse_y):
+                elif self.redo_button_rect.collidepoint(mouse_x, mouse_y):
                     self.current_highlighted_button = self.redo_button_rect
                     self.current_highlighted_number = None
+
+                # Mark Button
+                elif self.marking_button_rect.collidepoint(mouse_x, mouse_y):
+                    self.current_highlighted_button = self.marking_button_rect
+                    self.current_highlighted_number = None
+
+                # Erase Button
+                elif self.erase_button_rect.collidepoint(mouse_x, mouse_y):
+                    self.current_highlighted_button = self.erase_button_rect
+                    self.current_highlighted_number = None
+
+                else:
+                    self.current_highlighted_number = None
+                    self.current_highlighted_button = None
 
             # TODO: HighScore Events
 
@@ -349,10 +386,19 @@ class Game:
         self.window.blit(self.undo_button, (self.number_input_buttons_rect.x,
                                             self.number_input_buttons_rect.y + self.number_input_buttons_rect.height))
         pygame.draw.rect(self.window, Colors.Black, self.undo_button_rect, 1)
+
         # Redo Button
         self.window.blit(self.redo_button, (self.number_input_buttons_rect.x + 1 + self.number_input_buttons_rect.width//2,
                                             self.number_input_buttons_rect.y + self.number_input_buttons_rect.height))
         pygame.draw.rect(self.window, Colors.Black, self.redo_button_rect, 1)
+
+        # Mark Button
+        self.window.blit(self.marking_button, (self.marking_button_rect.x, self.marking_button_rect.y))
+        pygame.draw.rect(self.window, Colors.Black, self.marking_button_rect, 1)
+
+        # Erase Button
+        self.window.blit(self.erase_button, (self.erase_button_rect.x, self.erase_button_rect.y))
+        pygame.draw.rect(self.window, Colors.Black, self.erase_button_rect, 1)
 
         # Drawing numbers on the buttons
         for i in range(3):
@@ -365,15 +411,36 @@ class Game:
                                    number.get_height() // 3)))
         # Undo text
         text = self.button_font.render("UNDO", True, Colors.Black)
-        self.window.blit(text, (self.number_input_buttons_rect.x + self.undo_button.get_width()//2 - text.get_width()//2,
-                                self.number_input_buttons_rect.y + self.number_input_buttons_rect.height +
-                                5*self.undo_button.get_height()//6 - text.get_height()//2))
+        self.window.blit(text, (self.undo_button_rect.x + self.undo_button.get_width()//2 - text.get_width()//2,
+                                self.undo_button_rect.y + 5*self.undo_button.get_height()//6 - text.get_height()//2 + 3))
         # Redo text
         text = self.button_font.render("REDO", True, Colors.Black)
-        self.window.blit(text, (self.number_input_buttons_rect.x + self.number_input_buttons_rect.width//2 + 2 +
-                                self.undo_button.get_width() // 2 - text.get_width() // 2,
-                                self.number_input_buttons_rect.y + self.number_input_buttons_rect.height +
-                                5 * self.undo_button.get_height() // 6 - text.get_height() // 2))
+        self.window.blit(text, (self.redo_button_rect.x + 2 + self.redo_button.get_width() // 2 - text.get_width() // 2,
+                                self.redo_button_rect.y + 5 * self.undo_button.get_height() // 6 - text.get_height() // 2 + 3))
+
+        # Mark text
+        text = self.button_font.render("MARK", True, Colors.Black)
+        self.window.blit(text, (self.marking_button_rect.x + self.marking_button_rect.width//2 - text.get_width()//2,
+                                self.marking_button_rect.y + 5 * self.marking_button_rect.height//6 - text.get_height() // 2 + 3))
+        if self.puzzle.is_marking:
+            text = self.small_font.render("ON", True, Colors.White)
+            pygame.draw.ellipse(self.window, Colors.NeonBlue, (self.marking_button_rect.x + 84 - text.get_width(),
+                                                               self.marking_button_rect.y + 48 - text.get_height(),
+                                                               2 * text.get_width(), 2 * text.get_height()))
+            self.window.blit(text, (self.marking_button_rect.x + 84 - text.get_width() // 2,
+                                    self.marking_button_rect.y + 48 - text.get_height() // 2))
+        else:
+            text = self.small_font.render("OFF", True, Colors.Black)
+            pygame.draw.ellipse(self.window, Colors.WebLavender, (self.marking_button_rect.x + 84 - text.get_width(),
+                                                                  self.marking_button_rect.y + 48 - text.get_height(),
+                                                                  2 * text.get_width(), 2 * text.get_height()))
+            self.window.blit(text, (self.marking_button_rect.x + 84 - text.get_width() // 2,
+                                    self.marking_button_rect.y + 48 - text.get_height() // 2))
+
+        # Erase text
+        text = self.button_font.render("ERASE", True, Colors.Black)
+        self.window.blit(text, (self.erase_button_rect.x + 2 + self.erase_button_rect.width // 2 - text.get_width() // 2,
+                                self.erase_button_rect.y + 5 * self.erase_button_rect.height // 6 - text.get_height() // 2 + 3))
 
     def _draw_paused(self):
         # Drawing an empty grid for preventing player from watching it when paused
@@ -422,6 +489,14 @@ class Game:
                                             self.number_input_buttons_rect.y + self.number_input_buttons_rect.height))
         pygame.draw.rect(self.window, Colors.Black, self.redo_button_rect, 1)
 
+        # Mark Button
+        self.window.blit(self.marking_button, (self.marking_button_rect.x, self.marking_button_rect.y))
+        pygame.draw.rect(self.window, Colors.Black, self.marking_button_rect, 1)
+
+        # Erase Button
+        self.window.blit(self.erase_button, (self.erase_button_rect.x, self.erase_button_rect.y))
+        pygame.draw.rect(self.window, Colors.Black, self.erase_button_rect, 1)
+
         # Drawing numbers on the buttons
         for i in range(3):
             for j in range(3):
@@ -434,15 +509,36 @@ class Game:
 
         # Undo text
         text = self.button_font.render("UNDO", True, Colors.Black)
-        self.window.blit(text, (self.number_input_buttons_rect.x + self.undo_button.get_width()//2 - text.get_width()//2,
-                                self.number_input_buttons_rect.y + self.number_input_buttons_rect.height +
-                                5*self.undo_button.get_height()//6 - text.get_height()//2))
+        self.window.blit(text, (self.undo_button_rect.x + self.undo_button.get_width() // 2 - text.get_width() // 2,
+                                self.undo_button_rect.y + 5 * self.undo_button.get_height() // 6 - text.get_height() // 2 + 3))
         # Redo text
         text = self.button_font.render("REDO", True, Colors.Black)
-        self.window.blit(text, (self.number_input_buttons_rect.x + self.number_input_buttons_rect.width//2 + 2 +
-                                self.undo_button.get_width() // 2 - text.get_width() // 2,
-                                self.number_input_buttons_rect.y + self.number_input_buttons_rect.height +
-                                5 * self.undo_button.get_height() // 6 - text.get_height() // 2))
+        self.window.blit(text, (self.redo_button_rect.x + 2 + self.redo_button.get_width() // 2 - text.get_width() // 2,
+                                self.redo_button_rect.y + 5 * self.undo_button.get_height() // 6 - text.get_height() // 2 + 3))
+
+        # Mark text
+        text = self.button_font.render("MARK", True, Colors.Black)
+        self.window.blit(text, (self.marking_button_rect.x + self.marking_button_rect.width // 2 - text.get_width() // 2,
+                                self.marking_button_rect.y + 5 * self.marking_button_rect.height // 6 - text.get_height() // 2 + 3))
+        if self.puzzle.is_marking:
+            text = self.small_font.render("ON", True, Colors.White)
+            pygame.draw.ellipse(self.window, Colors.NeonBlue, (self.marking_button_rect.x + 84 - text.get_width(),
+                                                               self.marking_button_rect.y + 48 - text.get_height(),
+                                                               2 * text.get_width(), 2 * text.get_height()))
+            self.window.blit(text, (self.marking_button_rect.x + 84 - text.get_width() // 2,
+                                    self.marking_button_rect.y + 48 - text.get_height() // 2))
+        else:
+            text = self.small_font.render("OFF", True, Colors.Black)
+            pygame.draw.ellipse(self.window, Colors.WebLavender, (self.marking_button_rect.x + 84 - text.get_width(),
+                                                                  self.marking_button_rect.y + 48 - text.get_height(),
+                                                                  2 * text.get_width(), 2 * text.get_height()))
+            self.window.blit(text, (self.marking_button_rect.x + 84 - text.get_width() // 2,
+                                    self.marking_button_rect.y + 48 - text.get_height() // 2))
+
+        # Erase text
+        text = self.button_font.render("ERASE", True, Colors.Black)
+        self.window.blit(text, (self.erase_button_rect.x + 2 + self.erase_button_rect.width // 2 - text.get_width() // 2,
+                                self.erase_button_rect.y + 5 * self.erase_button_rect.height // 6 - text.get_height() // 2 + 3))
 
     def _draw_tutorial(self):
         # TODO: Implement drawing tutorial
