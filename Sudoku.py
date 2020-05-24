@@ -8,7 +8,7 @@ from random import shuffle, randrange
 
 # Make a list of numbers to choose from, to randomly fill the grid
 AVAILABLE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-AVAILABLE_POSITIONS = [(i, j) for i in range(9) for j in range(9)]
+AVAILABLE_POSITIONS = [(i, j) for j in range(9) for i in range(9)]
 
 # Keep track of number of solutions to a given sudoku board
 no_of_solutions = 0
@@ -146,6 +146,7 @@ class Sudoku:
         self.undo_history = []
         self.redo_history = []
         self.matching_numbers = None
+        self.completion = {"Row": [], "Column": [], "Box": []}
 
         # Initialize flags and placeholders
         self.is_marking = False
@@ -158,13 +159,21 @@ class Sudoku:
         """
 
         self.difficulty = difficulty
+        self.is_marking = False
         self.sudoku_completed = create_empty_sudoku_board()
         solve_sudoku(self.sudoku_completed)
         self.sudoku_puzzle = create_duplicate_board(self.sudoku_completed)
         generate_sudoku(self.sudoku_puzzle, self.difficulty)
         self.current_sudoku_puzzle = create_duplicate_board(self.sudoku_puzzle)
 
+        if sum([self.sudoku_puzzle[x].count(0) for x in range(9)]) != self.difficulty:
+            self.initialize_puzzle(self.difficulty)
+
         self.entry_prohibition = self._set_entry_prohibition()
+        self.completion["Column"] = [1 if 0 not in self.current_sudoku_puzzle[r] else 0 for r in range(9)]
+        self.completion["Row"] = [1 if 0 not in [self.current_sudoku_puzzle[r][c] for r in range(9)] else 0 for c in range(9)]
+        self.completion["Box"] = [1 if 0 not in [self.current_sudoku_puzzle[x][y] for x in range(r, r+3) for y in range(c, c+3)]
+                                  else 0 for c in range(0, 9, 3) for r in range(0, 9, 3)]
 
         self.markings = {(x, y): [] for x in range(9) for y in range(9) if (x, y) not in self.entry_prohibition}
         self.matching_numbers = {n: [] for n in range(1, 10)}
@@ -186,8 +195,9 @@ class Sudoku:
         correct_entries = 0
         for x in range(9):
             for y in range(9):
-                correct_entries += (self.sudoku_completed[x][y] == self.current_sudoku_puzzle[x][y])
-        return correct_entries/81
+                if self.sudoku_puzzle[x][y] == 0:
+                    correct_entries += (self.sudoku_completed[x][y] == self.current_sudoku_puzzle[x][y])
+        return (correct_entries/self.difficulty)*100
 
     def _clear_all_histories(self):
         """
@@ -232,9 +242,13 @@ class Sudoku:
 
         if (x, y) not in self.entry_prohibition:
             if self.is_marking:
-                self.markings[(x, y)].append(n)
-                self.current_sudoku_puzzle[x][y] = 0
-                self.undo_history.append((x, y, self.is_marking, -1))
+                if n not in self.markings[(x, y)]:
+                    self.markings[(x, y)].append(n)
+                    self.current_sudoku_puzzle[x][y] = 0
+                    self.undo_history.append((x, y, self.is_marking, -1))
+                else:
+                    self.markings[(x, y)].remove(n)
+                    self.undo_history.append((x, y, self.is_marking, n))
             else:
                 self.undo_history.append((x, y, self.is_marking, self.current_sudoku_puzzle[x][y]))
                 self.markings[(x, y)] = []
@@ -248,13 +262,14 @@ class Sudoku:
         :return: None
         """
 
-        if self.is_marking:
-            if self.markings[(x, y)]:
-                self.undo_history.append((x, y, self.is_marking, self.markings[(x, y)].pop()))
-        else:
-            if self.current_sudoku_puzzle[x][y] != 0:
-                self.undo_history.append((x, y, self.is_marking, self.current_sudoku_puzzle[x][y]))
-                self.current_sudoku_puzzle[x][y] = 0
+        if self.sudoku_puzzle[x][y] == 0:
+            if self.is_marking:
+                if self.markings[(x, y)]:
+                    self.undo_history.append((x, y, self.is_marking, self.markings[(x, y)].pop()))
+            else:
+                if self.current_sudoku_puzzle[x][y] != 0:
+                    self.undo_history.append((x, y, self.is_marking, self.current_sudoku_puzzle[x][y]))
+                    self.current_sudoku_puzzle[x][y] = 0
 
     def undo(self):
         """
@@ -266,21 +281,19 @@ class Sudoku:
         # Checks if there are moves to undo
         if self.undo_history:
             # Selects the current state's undo actions
-            selective_undo_history = [history for history in self.undo_history if history[2] == self.is_marking]
-            x, y, state, n = selective_undo_history.pop()
+            x, y, state, n = self.undo_history.pop()
 
             # Does operations based on current state
             if state:
                 if n == -1:
-                    self.redo_history.append((x, y, state, self.markings[(x, y)].pop()))
+                    if self.markings[(x, y)]:
+                        self.redo_history.append((x, y, state, self.markings[(x, y)].pop()))
                 else:
                     self.markings[(x, y)].append(n)
                     self.redo_history.append((x, y, state, -1))
             else:
                 self.redo_history.append((x, y, state, self.current_sudoku_puzzle[x][y]))
                 self.current_sudoku_puzzle[x][y] = n
-
-            self.undo_history.remove((x, y, state, n))
 
     def redo(self):
         """
@@ -292,18 +305,16 @@ class Sudoku:
         # Checks if there are moves to redo
         if self.redo_history:
             # Selects the current state's redo actions
-            selective_redo_history = [history for history in self.redo_history if history[2] == self.is_marking]
-            x, y, state, n = selective_redo_history.pop()
+            x, y, state, n = self.redo_history.pop()
 
             # Does operations based on current state
             if state:
                 if n == -1:
-                    self.undo_history.append((x, y, state, self.markings[(x, y)].pop()))
+                    if self.markings[(x, y)]:
+                        self.undo_history.append((x, y, state, self.markings[(x, y)].pop()))
                 else:
                     self.markings[(x, y)].append(n)
                     self.undo_history.append((x, y, state, -1))
             else:
                 self.undo_history.append((x, y, state, self.current_sudoku_puzzle[x][y]))
                 self.current_sudoku_puzzle[x][y] = n
-
-            self.redo_history.remove((x, y, state, n))
