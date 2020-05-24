@@ -446,6 +446,10 @@ class Game:
         return True
 
     def _draw_intro(self):
+        """
+        Handles all the drawing activities in the Intro state
+        :return: None
+        """
         self.intro_countdown -= 1
         if self.intro_countdown < 0:
             self.intro_countdown = 100
@@ -459,6 +463,10 @@ class Game:
             self.window.blit(text, (self.WIDTH//2 - text.get_width()//2, 5*self.HEIGHT//6 - text.get_height()//2))
 
     def _draw_diff_selection(self):
+        """
+        Handles all the drawing activities in the Difficulty Selection state
+        :return: None
+        """
         # Draw the text boxes
         self.window.blit(self.sudoku_bg, (0, 0))
         self.window.blit(self.easy_box[self.easy_box_rect.collidepoint(pygame.mouse.get_pos())], self.easy_box_rect[:2])
@@ -472,11 +480,11 @@ class Game:
         self.window.blit(self.hard_box_text, self.hard_box_rect[:2])
         self.window.blit(self.expert_box_text, self.expert_box_rect[:2])
 
-    def _draw_login(self):
-        # TODO: Implement drawing login
-        pass
-
     def _draw_playing(self):
+        """
+        Handles all the drawing activities in the Playing state
+        :return: None
+        """
         # Set bg
         self.window.blit(self.sudoku_bg, (0, 0))
         pygame.draw.rect(self.window, Colors.White, self.grid)
@@ -740,6 +748,10 @@ class Game:
             self.state = State.Scores
 
     def _draw_paused(self):
+        """
+        Handles all the drawing activites in the Paused State
+        :return: None
+        """
         self.window.blit(self.sudoku_bg, (0, 0))
         pygame.draw.rect(self.window, Colors.White, self.grid)
         pygame.draw.rect(self.window, Colors.White, self.number_input_buttons_rect)
@@ -903,6 +915,10 @@ class Game:
                                 self.grid.y - text.get_height() - 2))
 
     def _draw_scores(self):
+        """
+        Handles all the drawing activites in the Scores state
+        :return: None
+        """
         self.window.blit(self.sudoku_bg, (0, 0))
         total_score = self.score + self.current_bonus - self.error_deduction
 
@@ -963,10 +979,11 @@ class Game:
         self.window.blit(text, (self.exit_button.x + self.exit_button.width // 2 - text.get_width() // 2,
                                 self.exit_button.y + self.exit_button.height // 2 - text.get_height() // 2))
 
-    def _draw_highscore(self):
-        self.window.blit(self.sudoku_bg, (0, 0))
-
     def _draw(self):
+        """
+        Handles all the master drawing states
+        :return: None
+        """
         running = True
 
         while running:
@@ -981,16 +998,5 @@ class Game:
             pygame.display.update()
 
         pygame.quit()
-
-
-# TODO: 1.Custom Buttons
-# TODO: 2.Menu Options
-# TODO: 3.State Machine
-# TODO: 4.GamePlay Interface
-# TODO: 5.Pausing mechanic
-# TODO: 6.Handling input from user
-# TODO: 7.HighScore and LeaderBoard
-# TODO: 8.Difficulty Selection
-# TODO: 9.Tutorial section
 
 Game()

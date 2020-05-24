@@ -166,6 +166,7 @@ class Sudoku:
         generate_sudoku(self.sudoku_puzzle, self.difficulty)
         self.current_sudoku_puzzle = create_duplicate_board(self.sudoku_puzzle)
 
+        # If the correct number of entries are not removed, then redo again
         if sum([self.sudoku_puzzle[x].count(0) for x in range(9)]) != self.difficulty:
             self.initialize_puzzle(self.difficulty)
 
